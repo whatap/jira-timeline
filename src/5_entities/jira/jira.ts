@@ -1,15 +1,15 @@
 import { Version3Client } from 'jira.js';
 
-const token = window.localStorage.getItem('jira-api-key') ?? '';
+const email = window.localStorage.getItem('jira-email') ?? '';
+const apiToken = window.localStorage.getItem('jira-api-key') ?? '';
 const userIdList = JSON.parse(window.localStorage.getItem('user-json') ?? '[]');
 
 const client = new Version3Client({
-  // host: "https://whatap-labs.atlassian.net",
-  host: 'http://localhost:3333',
+  host: import.meta.env.PROD ? 'https://whatap-labs.atlassian.net' : 'http://localhost:3333',
   authentication: {
     basic: {
-      email: 'dongkyun@whatap.io',
-      apiToken: token,
+      email,
+      apiToken,
     },
   },
 });
