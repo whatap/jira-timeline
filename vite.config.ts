@@ -15,6 +15,13 @@ export default defineConfig({
         secure: false,
         ws: true,
       },
+      '/ex/jira': {
+        target: 'https://api.atlassian.com/',
+        changeOrigin: true,
+        // rewrite: (path) => path.replace(/^\//, ""),
+        secure: false,
+        ws: true,
+      },
     },
   },
 });
