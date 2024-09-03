@@ -1,9 +1,13 @@
 import { AddJiraUserForm } from '@/4_features/add-jira-user';
-import { SaveJiraApiKeyForm } from '@/4_features/save-jira-api-key';
+import { useAuth } from '@/5_entities/auth';
 import { Button } from '@/6_shared/shadcn';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/6_shared/shadcn/ui/dialog';
 
 function SettingDialog() {
+  const { isLoggedIn, login, logout } = useAuth();
+
+  const actionLabel = isLoggedIn ? 'Logout' : 'Login';
+
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -16,9 +20,19 @@ function SettingDialog() {
         <AddJiraUserForm />
 
         <DialogHeader>
-          <DialogTitle>Jira API Key</DialogTitle>
+          <DialogTitle>Jira {actionLabel}</DialogTitle>
         </DialogHeader>
-        <SaveJiraApiKeyForm />
+        <Button
+          onClick={() => {
+            if (isLoggedIn) {
+              logout();
+            } else {
+              login();
+            }
+          }}
+        >
+          {actionLabel}
+        </Button>
       </DialogContent>
     </Dialog>
   );

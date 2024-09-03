@@ -10,16 +10,18 @@ import Timeline, {
 
 import { SettingDialog } from '@/3_widgets/setting-dialog';
 import { getIssues } from '@/5_entities/jira';
+import { useClientStore } from '@/5_entities/jira/jiraClientStore';
 
 function MainPage() {
-  const { data } = useQuery({ queryKey: ['getIssues'], queryFn: getIssues });
+  const { client } = useClientStore();
+  const { data } = useQuery({ queryKey: ['getIssues'], queryFn: () => getIssues(client!), enabled: Boolean(client) });
 
   if (!data) {
     return <SettingDialog />;
   }
 
   const issues =
-    data?.issues?.map((issue) => ({
+    data?.map((issue) => ({
       key: issue.key,
       assignee: issue.fields.assignee.displayName,
       creator: issue.fields.creator.displayName,
@@ -30,8 +32,6 @@ function MainPage() {
       issueType: issue.fields.issueType?.name,
       status: issue.fields.status?.name,
     })) ?? [];
-
-  console.log('issues', issues);
 
   const groups = issues.reduce<{ id: number | string; title: string }[]>((acc, issue) => {
     if (acc.find((item) => item.id === issue.assignee)) {
