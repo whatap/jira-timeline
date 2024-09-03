@@ -2,7 +2,9 @@ import ky from 'ky';
 import qs from 'query-string';
 
 const CLIENT_ID = 't7bc3uWBBA32iaObqHLT3u9174lXN8YJ';
-const REDIRECT_URI = 'http://localhost:3333/jira-timeline';
+const REDIRECT_URI = import.meta.env.PROD
+  ? 'https://whatap.github.io/jira-timeline/'
+  : 'http://localhost:3333/jira-timeline';
 
 export function getAuthorizationUrl() {
   return qs.stringifyUrl({
