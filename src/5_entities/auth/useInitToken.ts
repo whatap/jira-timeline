@@ -30,6 +30,8 @@ export function useInitToken() {
       setAccessToken(accessToken);
       setCloudId(cloudId);
       initClient(accessToken, cloudId);
+
+      history.replaceState({}, '', '/jira-timeline/');
     })();
   }, [accessToken, initClient, setAccessToken, setCloudId]);
 }
