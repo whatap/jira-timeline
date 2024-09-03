@@ -10,7 +10,7 @@ export function getAuthorizationUrl() {
     query: {
       audience: 'api.atlassian.com',
       client_id: CLIENT_ID,
-      scope: 'read:jira-work manage:jira-project read:jira-user read:me',
+      scope: 'read:jira-work read:jira-user read:me',
       redirect_uri: REDIRECT_URI,
       state: new Date().getTime().toString(),
       response_type: 'code',
