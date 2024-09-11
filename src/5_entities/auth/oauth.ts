@@ -1,7 +1,8 @@
 import ky from 'ky';
 import qs from 'query-string';
 
-const CLIENT_ID = 't7bc3uWBBA32iaObqHLT3u9174lXN8YJ';
+const CLIENT_ID = import.meta.env.VITE_JIRA_CLIENT_ID;
+const SECRET = import.meta.env.VITE_JIRA_SECRET;
 const REDIRECT_URI = import.meta.env.PROD
   ? 'https://whatap.github.io/jira-timeline/'
   : 'http://localhost:3333/jira-timeline';
@@ -36,7 +37,7 @@ export async function exchangeAuthCodeForAccessToken(authCode: string): Promise<
       json: {
         grant_type: 'authorization_code',
         client_id: CLIENT_ID,
-        client_secret: import.meta.env.VITE_JIRA_SECRET,
+        client_secret: SECRET,
         code: authCode,
         redirect_uri: REDIRECT_URI,
       },
