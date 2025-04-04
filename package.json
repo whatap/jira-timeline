@@ -51,7 +51,7 @@
     "prettier": "^3.3.3",
     "tailwindcss": "^3.4.9",
     "typescript": "^5.2.2",
-    "vite": "^5.3.1",
+    "vite": "^5.4.17",
     "vite-tsconfig-paths": "^5.0.1"
   }
 }
