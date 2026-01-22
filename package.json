@@ -10,7 +10,9 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "pregh-pages": "pnpm build",
-    "gh-pages": "gh-pages -d dist"
+    "gh-pages": "gh-pages -d dist",
+    "test": "vitest",
+    "test:run": "vitest run"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.1",
@@ -20,7 +22,7 @@
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "jira-client": "^8.2.2",
-    "jira.js": "^4.0.1",
+    "jira.js": "^5.2.2",
     "ky": "^1.7.2",
     "lucide-react": "^0.427.0",
     "moment": "^2.30.1",
@@ -52,6 +54,7 @@
     "tailwindcss": "^3.4.9",
     "typescript": "^5.2.2",
     "vite": "^5.3.1",
-    "vite-tsconfig-paths": "^5.0.1"
+    "vite-tsconfig-paths": "^5.0.1",
+    "vitest": "^4.0.17"
   }
 }
