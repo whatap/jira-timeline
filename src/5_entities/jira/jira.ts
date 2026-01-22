@@ -1,19 +1,87 @@
 import { Version3Client } from 'jira.js';
 
-const userIdList = JSON.parse(window.localStorage.getItem('user-json') ?? '[]');
+import type { DateRange } from '@/6_shared/utils';
 
-export async function getIssues(client: Version3Client) {
-  return (
-    await Promise.all(
-      (userIdList ?? []).map((id: string) =>
-        client.issueSearch.searchForIssuesUsingJql({
-          jql: `assignee IN (${id}) AND "예정된 시작 날짜[date]" IS NOT EMPTY`, // AND status IN ("In Review", "In Progress", Preview, QA, Re-Opened, "To Do", "WAITING DEPLOY")`,
-          fields: ['assignee', 'creator', 'summary', 'issueType', 'status', 'customfield_10156', 'customfield_10157'],
-          maxResults: 200,
-        }),
-      ),
-    )
-  ).reduce((acc, cur) => [...acc, ...cur.issues], []);
+// Issue 타입 정의
+export interface Issue {
+  key: string;
+  assignee: string;
+  creator: string;
+  summary: string;
+  startTime: string; // YYYY-MM-DD
+  endTime: string; // YYYY-MM-DD
+  issueType?: string;
+  status?: string;
+  link: string;
+}
+
+// Jira API 응답 타입 (필요한 필드만 정의)
+interface JiraIssueResponse {
+  key: string;
+  fields: {
+    assignee?: { displayName?: string } | null;
+    creator?: { displayName?: string } | null;
+    summary?: string | null;
+    issuetype?: { name?: string } | null;
+    status?: { name?: string } | null;
+    customfield_10156?: string | null; // 시작일
+    customfield_10157?: string | null; // 종료일
+  };
+}
+
+/**
+ * userIdList를 localStorage에서 읽어옴
+ * 함수 내부에서 호출하여 모듈 로드 시점 문제 방지
+ */
+function getUserIdList(): string[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    return JSON.parse(window.localStorage.getItem('user-json') ?? '[]');
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * 날짜 범위에 해당하는 이슈를 조회
+ * @param client Jira API 클라이언트
+ * @param dateRange 조회할 날짜 범위
+ * @returns 변환된 Issue 배열
+ */
+export async function getIssues(client: Version3Client, dateRange: DateRange): Promise<Issue[]> {
+  const userIdList = getUserIdList();
+
+  if (userIdList.length === 0) {
+    return [];
+  }
+
+  const results = await Promise.all(
+    userIdList.map((id: string) =>
+      client.issueSearch.searchForIssuesUsingJqlEnhancedSearch({
+        jql: `assignee IN (${id}) AND "예정된 시작 날짜[date]" IS NOT EMPTY AND customfield_10157 >= "${dateRange.start}" AND customfield_10157 <= "${dateRange.end}"`,
+        fields: ['assignee', 'creator', 'summary', 'issuetype', 'status', 'customfield_10156', 'customfield_10157'],
+        maxResults: 200,
+      }),
+    ),
+  );
+
+  // API 응답을 Issue 타입으로 변환
+  const allIssues: JiraIssueResponse[] = results.reduce<JiraIssueResponse[]>(
+    (acc, cur) => [...acc, ...((cur.issues as JiraIssueResponse[]) ?? [])],
+    [],
+  );
+
+  return allIssues.map((issue) => ({
+    key: issue.key,
+    assignee: issue.fields.assignee?.displayName ?? '',
+    creator: issue.fields.creator?.displayName ?? '',
+    summary: issue.fields.summary ?? '',
+    startTime: issue.fields.customfield_10156 ?? '',
+    endTime: issue.fields.customfield_10157 ?? '',
+    issueType: issue.fields.issuetype?.name,
+    status: issue.fields.status?.name,
+    link: `https://whatap-labs.atlassian.net/browse/${issue.key}`,
+  }));
 }
 
 export function createJiraClient(accessToken: string, cloudId: string) {
