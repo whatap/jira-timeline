@@ -67,10 +67,10 @@ function MainPage() {
             <div
               {...getItemProps({
                 style: { padding: '0 3px', background: 'none', border: 'none' },
-                onMouseDown: () => {
-                  console.log('on item click', item);
-                },
               })}
+              onClick={() => {
+                window.open(`https://whatap-labs.atlassian.net/browse/${item.id}`, '_blank');
+              }}
             >
               <div
                 style={{
