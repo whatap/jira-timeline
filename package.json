@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "homepage": "https://whatap.github.io/jira-timline/",
+  "homepage": "https://whatap.github.io/jira-timeline/",
   "scripts": {
     "dev": "vite --port 3333",
     "build": "vite build",
