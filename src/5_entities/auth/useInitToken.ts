@@ -24,8 +24,6 @@ export function useInitToken() {
       const { access_token: accessToken } = await exchangeAuthCodeForAccessToken(code);
       const { id: cloudId } = (await getAccessibleResources(accessToken))[0];
 
-      console.log('accessToken', accessToken);
-      console.log('cloudId', cloudId);
       getAccessibleResources(accessToken);
       setAccessToken(accessToken);
       setCloudId(cloudId);
