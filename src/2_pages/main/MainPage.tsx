@@ -9,6 +9,7 @@ import Timeline, {
 } from 'react-calendar-timeline';
 
 import { Header } from '@/3_widgets/header';
+import { UserRegisterModal } from '@/4_features/user-register-modal';
 import { getIssues, useIssueStore } from '@/5_entities/jira';
 import { useClientStore } from '@/5_entities/jira/jiraClientStore';
 import { useUserStore } from '@/5_entities/user';
@@ -173,29 +174,16 @@ function MainPage() {
   // store의 issues를 배열로 변환
   const issueList = useMemo(() => Object.values(issues), [issues]);
 
-  // 사용자 ID -> 입력 이름 매핑
-  const userNameMap = useMemo(() => {
-    const map = new Map<string, string>();
-    users.forEach((user) => {
-      map.set(user.id, user.name);
-    });
-    return map;
-  }, [users]);
+  // 조회 완료된(isVerified) 사용자만 필터링
+  const verifiedUsers = useMemo(() => users.filter((user) => user.isVerified), [users]);
 
-  // 타임라인용 데이터 변환 - groups
+  // 타임라인용 데이터 변환 - groups (조회 완료된 사용자만 표시)
   const groups = useMemo(() => {
-    const uniqueUsers = new Map<string, { id: string; title: string; userName: string }>();
-    issueList.forEach((issue) => {
-      if (issue.userId && !uniqueUsers.has(issue.userId)) {
-        uniqueUsers.set(issue.userId, {
-          id: issue.userId,
-          title: issue.assignee,
-          userName: userNameMap.get(issue.userId) ?? '',
-        });
-      }
-    });
-    return Array.from(uniqueUsers.values());
-  }, [issueList, userNameMap]);
+    return verifiedUsers.map((user) => ({
+      id: user.id,
+      title: user.displayName ?? user.id,
+    }));
+  }, [verifiedUsers]);
 
   // 타임라인용 데이터 변환 - items
   const items = useMemo(() => {
@@ -209,6 +197,20 @@ function MainPage() {
         end_time: moment(issue.endTime).add(1, 'day'),
       }));
   }, [issueList]);
+
+  // 등록된 사용자가 없으면 안내 메시지 표시
+  if (users.length === 0) {
+    return (
+      <div>
+        <Header />
+        <div className="flex flex-col items-center justify-center h-[calc(100vh-57px)] gap-4 text-gray-500">
+          <p>등록된 사용자가 없습니다.</p>
+          <p className="text-sm">사용자를 등록하면 타임라인에서 업무 현황을 확인할 수 있습니다.</p>
+          <UserRegisterModal />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -272,7 +274,6 @@ function MainPage() {
         sidebarWidth={150}
         stackItems
         groupRenderer={({ group }) => {
-          const userName = userNameMap.get(group.id as string);
           return (
             <div
               style={{
@@ -280,8 +281,7 @@ function MainPage() {
                 overflow: 'hidden',
                 height: '100%',
                 display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
+                alignItems: 'center',
               }}
             >
               <div
@@ -290,25 +290,10 @@ function MainPage() {
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   fontSize: 13,
-                  lineHeight: '18px',
                 }}
               >
                 {group.title}
               </div>
-              {userName && (
-                <div
-                  style={{
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    fontSize: 11,
-                    lineHeight: '14px',
-                    color: '#888',
-                  }}
-                >
-                  {userName}
-                </div>
-              )}
             </div>
           );
         }}
