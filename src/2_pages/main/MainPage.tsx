@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
 import moment from 'moment';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import Timeline, {
   DateHeader,
   SidebarHeader,
@@ -9,9 +9,11 @@ import Timeline, {
 } from 'react-calendar-timeline';
 
 import { SettingDialog } from '@/3_widgets/setting-dialog';
+import { UserRegisterModal } from '@/4_features/user-register-modal';
 import { getIssues, useIssueStore } from '@/5_entities/jira';
 import { useClientStore } from '@/5_entities/jira/jiraClientStore';
-import { getNonOverlappingRanges, normalizeDateRange, type DateRange } from '@/6_shared/utils';
+import { useUserStore } from '@/5_entities/user';
+import { type DateRange, getNonOverlappingRanges, normalizeDateRange } from '@/6_shared/utils';
 
 /**
  * debounce 유틸리티 - cancel 메서드 포함
@@ -39,6 +41,7 @@ function debounce<T extends (...args: Parameters<T>) => void>(fn: T, delay: numb
 
 function MainPage() {
   const { client } = useClientStore();
+  const { users } = useUserStore();
   const {
     issues,
     fetchedRanges,
@@ -49,6 +52,7 @@ function MainPage() {
     incrementLoading,
     decrementLoading,
     setError,
+    clear,
   } = useIssueStore();
 
   // 조회 중인 구간을 추적 (중복 요청 방지)
@@ -88,7 +92,7 @@ function MainPage() {
         decrementLoading();
       }
     },
-    [addIssues, addFetchedRange, incrementLoading, decrementLoading, setError]
+    [addIssues, addFetchedRange, incrementLoading, decrementLoading, setError],
   );
 
   // 필요한 구간들 조회 (ref에서 최신 상태 참조)
@@ -103,7 +107,7 @@ function MainPage() {
         fetchRange(range);
       });
     },
-    [fetchRange]
+    [fetchRange],
   );
 
   // debounce 적용 (ref로 관리하여 재생성 방지)
@@ -136,6 +140,27 @@ function MainPage() {
     fetchRangesIfNeeded(initialStart, initialEnd);
   }, [client, fetchRangesIfNeeded]);
 
+  // 사용자 목록 변경 시 데이터 초기화 및 재조회
+  const isFirstMount = useRef(true);
+  useEffect(() => {
+    if (isFirstMount.current) {
+      isFirstMount.current = false;
+      return;
+    }
+    if (!client) return;
+
+    // 기존 데이터 초기화
+    clear();
+    fetchingRanges.current.clear();
+    // stateRef도 함께 초기화 (fetchRangesIfNeeded가 참조하는 값)
+    stateRef.current.fetchedRanges = [];
+
+    // 현재 구간 재조회
+    const now = Date.now();
+    const oneMonthMs = 30 * 24 * 60 * 60 * 1000;
+    fetchRangesIfNeeded(now - oneMonthMs, now + oneMonthMs);
+  }, [users, client, clear, fetchRangesIfNeeded]);
+
   // 타임라인 이벤트 핸들러
   const handleTimeChange = useCallback(
     (visibleTimeStart: number, visibleTimeEnd: number, updateScrollCanvas: (start: number, end: number) => void) => {
@@ -145,33 +170,43 @@ function MainPage() {
       // 스크롤 캔버스는 즉시 업데이트
       updateScrollCanvas(visibleTimeStart, visibleTimeEnd);
     },
-    []
+    [],
   );
 
   // store의 issues를 배열로 변환
   const issueList = useMemo(() => Object.values(issues), [issues]);
 
+  // 사용자 ID -> 입력 이름 매핑
+  const userNameMap = useMemo(() => {
+    const map = new Map<string, string>();
+    users.forEach((user) => {
+      map.set(user.id, user.name);
+    });
+    return map;
+  }, [users]);
+
   // 타임라인용 데이터 변환 - groups
   const groups = useMemo(() => {
-    const uniqueAssignees = new Map<string, { id: string; title: string }>();
+    const uniqueUsers = new Map<string, { id: string; title: string; userName: string }>();
     issueList.forEach((issue) => {
-      if (issue.assignee && !uniqueAssignees.has(issue.assignee)) {
-        uniqueAssignees.set(issue.assignee, {
-          id: issue.assignee,
+      if (issue.userId && !uniqueUsers.has(issue.userId)) {
+        uniqueUsers.set(issue.userId, {
+          id: issue.userId,
           title: issue.assignee,
+          userName: userNameMap.get(issue.userId) ?? '',
         });
       }
     });
-    return Array.from(uniqueAssignees.values());
-  }, [issueList]);
+    return Array.from(uniqueUsers.values());
+  }, [issueList, userNameMap]);
 
   // 타임라인용 데이터 변환 - items
   const items = useMemo(() => {
     return issueList
-      .filter((issue) => issue.assignee && issue.startTime && issue.endTime)
+      .filter((issue) => issue.userId && issue.startTime && issue.endTime)
       .map((issue) => ({
         id: issue.key,
-        group: issue.assignee,
+        group: issue.userId,
         title: issue.summary,
         start_time: moment(issue.startTime),
         end_time: moment(issue.endTime).add(1, 'day'),
@@ -185,42 +220,13 @@ function MainPage() {
 
   return (
     <div>
-      {/* 로딩 인디케이터 */}
-      {isLoading() && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 10,
-            right: 10,
-            padding: '8px 16px',
-            backgroundColor: '#007bff',
-            color: 'white',
-            borderRadius: 4,
-            zIndex: 1000,
-          }}
-        >
-          로딩 중...
-        </div>
-      )}
-
-      {/* 에러 메시지 */}
-      {error && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 10,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            padding: '8px 16px',
-            backgroundColor: '#dc3545',
-            color: 'white',
-            borderRadius: 4,
-            zIndex: 1000,
-          }}
-        >
-          {error}
-        </div>
-      )}
+      {/* 상단바 */}
+      <div className='flex items-center gap-2 p-2 border-b'>
+        <SettingDialog />
+        <UserRegisterModal />
+        {isLoading() && <span className='ml-auto text-sm text-blue-500'>로딩 중...</span>}
+        {error && <span className='ml-auto text-sm text-red-500'>{error}</span>}
+      </div>
 
       <Timeline
         groups={groups}
@@ -232,7 +238,7 @@ function MainPage() {
         canResize={false}
         minZoom={5 * 24 * 60 * 60 * 1000}
         maxZoom={3 * 30 * 24 * 60 * 60 * 1000}
-        lineHeight={50}
+        lineHeight={60}
         itemRenderer={({ item, itemContext, getItemProps, getResizeProps }) => {
           const { left: leftResizeProps, right: rightResizeProps } = getResizeProps();
           return (
@@ -277,8 +283,49 @@ function MainPage() {
             </div>
           );
         }}
-        sidebarWidth={100}
+        sidebarWidth={150}
         stackItems
+        groupRenderer={({ group }) => {
+          const userName = userNameMap.get(group.id as string);
+          return (
+            <div
+              style={{
+                padding: '0 8px',
+                overflow: 'hidden',
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+              }}
+            >
+              <div
+                style={{
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  fontSize: 13,
+                  lineHeight: '18px',
+                }}
+              >
+                {group.title}
+              </div>
+              {userName && (
+                <div
+                  style={{
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    fontSize: 11,
+                    lineHeight: '14px',
+                    color: '#888',
+                  }}
+                >
+                  {userName}
+                </div>
+              )}
+            </div>
+          );
+        }}
       >
         <TimelineMarkers>
           <TodayMarker date={new Date()} />
@@ -286,11 +333,7 @@ function MainPage() {
         <TimelineHeaders>
           <SidebarHeader>
             {({ getRootProps }) => {
-              return (
-                <div {...getRootProps()}>
-                  <SettingDialog />
-                </div>
-              );
+              return <div {...getRootProps()} />;
             }}
           </SidebarHeader>
           <DateHeader unit='primaryHeader' />
