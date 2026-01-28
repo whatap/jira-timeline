@@ -107,3 +107,29 @@ export function createJiraClient(accessToken: string, cloudId: string) {
     },
   });
 }
+
+export type JiraUserInfo = {
+  accountId: string;
+  displayName: string;
+};
+
+/**
+ * Jira 사용자 정보를 조회
+ * @param client Jira API 클라이언트
+ * @param accountId 조회할 사용자의 accountId
+ * @returns 사용자 정보 또는 null (조회 실패 시)
+ */
+export async function getJiraUser(client: Version3Client, accountId: string): Promise<JiraUserInfo | null> {
+  try {
+    const user = await client.users.getUser({ accountId });
+    if (!user.accountId || !user.displayName) {
+      return null;
+    }
+    return {
+      accountId: user.accountId,
+      displayName: user.displayName,
+    };
+  } catch {
+    return null;
+  }
+}
