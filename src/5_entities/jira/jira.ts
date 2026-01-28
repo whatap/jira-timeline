@@ -5,6 +5,8 @@ import type { DateRange } from '@/6_shared/utils';
 // Issue 타입 정의
 export interface Issue {
   key: string;
+  userId: string; // 조회에 사용한 사용자 ID (userStore의 id)
+  assigneeId: string;
   assignee: string;
   creator: string;
   summary: string;
@@ -19,7 +21,7 @@ export interface Issue {
 interface JiraIssueResponse {
   key: string;
   fields: {
-    assignee?: { displayName?: string } | null;
+    assignee?: { accountId?: string; displayName?: string } | null;
     creator?: { displayName?: string } | null;
     summary?: string | null;
     issuetype?: { name?: string } | null;
@@ -31,12 +33,16 @@ interface JiraIssueResponse {
 
 /**
  * userIdList를 localStorage에서 읽어옴
- * 함수 내부에서 호출하여 모듈 로드 시점 문제 방지
+ * zustand persist 스토어 형식에서 users 배열의 id만 추출
  */
 function getUserIdList(): string[] {
   if (typeof window === 'undefined') return [];
   try {
-    return JSON.parse(window.localStorage.getItem('user-json') ?? '[]');
+    const stored = window.localStorage.getItem('jira-users');
+    if (!stored) return [];
+    const parsed = JSON.parse(stored);
+    const users = parsed?.state?.users ?? [];
+    return users.map((u: { id: string }) => u.id);
   } catch {
     return [];
   }
@@ -56,32 +62,37 @@ export async function getIssues(client: Version3Client, dateRange: DateRange): P
   }
 
   const results = await Promise.all(
-    userIdList.map((id: string) =>
-      client.issueSearch.searchForIssuesUsingJqlEnhancedSearch({
-        jql: `assignee IN (${id}) AND "예정된 시작 날짜[date]" IS NOT EMPTY AND customfield_10157 >= "${dateRange.start}" AND customfield_10157 <= "${dateRange.end}"`,
+    userIdList.map(async (userId: string) => {
+      const response = await client.issueSearch.searchForIssuesUsingJqlEnhancedSearch({
+        jql: `assignee IN (${userId}) AND "예정된 시작 날짜[date]" IS NOT EMPTY AND customfield_10157 >= "${dateRange.start}" AND customfield_10157 <= "${dateRange.end}"`,
         fields: ['assignee', 'creator', 'summary', 'issuetype', 'status', 'customfield_10156', 'customfield_10157'],
         maxResults: 200,
-      }),
-    ),
+      });
+      return { userId, issues: (response.issues as JiraIssueResponse[]) ?? [] };
+    }),
   );
 
-  // API 응답을 Issue 타입으로 변환
-  const allIssues: JiraIssueResponse[] = results.reduce<JiraIssueResponse[]>(
-    (acc, cur) => [...acc, ...((cur.issues as JiraIssueResponse[]) ?? [])],
-    [],
-  );
+  // API 응답을 Issue 타입으로 변환 (userId 포함)
+  const allIssues: Issue[] = [];
+  results.forEach(({ userId, issues }) => {
+    issues.forEach((issue) => {
+      allIssues.push({
+        key: issue.key,
+        userId,
+        assigneeId: issue.fields.assignee?.accountId ?? '',
+        assignee: issue.fields.assignee?.displayName ?? '',
+        creator: issue.fields.creator?.displayName ?? '',
+        summary: issue.fields.summary ?? '',
+        startTime: issue.fields.customfield_10156 ?? '',
+        endTime: issue.fields.customfield_10157 ?? '',
+        issueType: issue.fields.issuetype?.name,
+        status: issue.fields.status?.name,
+        link: `https://whatap-labs.atlassian.net/browse/${issue.key}`,
+      });
+    });
+  });
 
-  return allIssues.map((issue) => ({
-    key: issue.key,
-    assignee: issue.fields.assignee?.displayName ?? '',
-    creator: issue.fields.creator?.displayName ?? '',
-    summary: issue.fields.summary ?? '',
-    startTime: issue.fields.customfield_10156 ?? '',
-    endTime: issue.fields.customfield_10157 ?? '',
-    issueType: issue.fields.issuetype?.name,
-    status: issue.fields.status?.name,
-    link: `https://whatap-labs.atlassian.net/browse/${issue.key}`,
-  }));
+  return allIssues;
 }
 
 export function createJiraClient(accessToken: string, cloudId: string) {

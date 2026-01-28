@@ -1,4 +1,3 @@
-import { AddJiraUserForm } from '@/4_features/add-jira-user';
 import { useAuth } from '@/5_entities/auth';
 import { Button } from '@/6_shared/shadcn';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/6_shared/shadcn/ui/dialog';
@@ -13,12 +12,7 @@ function SettingDialog() {
       <DialogTrigger asChild>
         <Button variant='secondary'>설정</Button>
       </DialogTrigger>
-      <DialogContent className=''>
-        <DialogHeader>
-          <DialogTitle>User Json</DialogTitle>
-        </DialogHeader>
-        <AddJiraUserForm />
-
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Jira {actionLabel}</DialogTitle>
         </DialogHeader>
