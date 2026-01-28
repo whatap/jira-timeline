@@ -1,18 +1,30 @@
 import { QueryClientProvider } from '@tanstack/react-query';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import 'react-calendar-timeline/lib/Timeline.css';
 
+import { CallbackPage } from '@/2_pages/callback';
+import { LoginPage } from '@/2_pages/login';
 import MainPage from '@/2_pages/main';
-import { useInitToken } from '@/5_entities/auth';
+import { ProtectedRoute } from '@/4_features/protected-route';
 import { queryClient } from '@/6_shared/api/queryClient';
 
 import './react-calendar-custom-style.css';
 
-function App() {
-  useInitToken();
+const BASENAME = '/jira-timeline';
 
+function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <MainPage />
+      <BrowserRouter basename={BASENAME}>
+        <Routes>
+          <Route path='/login' element={<LoginPage />} />
+          <Route path='/callback' element={<CallbackPage />} />
+          <Route element={<ProtectedRoute />}>
+            <Route path='/' element={<MainPage />} />
+          </Route>
+          <Route path='*' element={<Navigate to='/login' replace />} />
+        </Routes>
+      </BrowserRouter>
     </QueryClientProvider>
   );
 }

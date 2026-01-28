@@ -8,8 +8,7 @@ import Timeline, {
   TodayMarker,
 } from 'react-calendar-timeline';
 
-import { SettingDialog } from '@/3_widgets/setting-dialog';
-import { UserRegisterModal } from '@/4_features/user-register-modal';
+import { Header } from '@/3_widgets/header';
 import { getIssues, useIssueStore } from '@/5_entities/jira';
 import { useClientStore } from '@/5_entities/jira/jiraClientStore';
 import { useUserStore } from '@/5_entities/user';
@@ -45,8 +44,6 @@ function MainPage() {
   const {
     issues,
     fetchedRanges,
-    error,
-    isLoading,
     addIssues,
     addFetchedRange,
     incrementLoading,
@@ -213,20 +210,9 @@ function MainPage() {
       }));
   }, [issueList]);
 
-  // 클라이언트가 없으면 설정 다이얼로그만 표시
-  if (!client) {
-    return <SettingDialog />;
-  }
-
   return (
     <div>
-      {/* 상단바 */}
-      <div className='flex items-center gap-2 p-2 border-b'>
-        <SettingDialog />
-        <UserRegisterModal />
-        {isLoading() && <span className='ml-auto text-sm text-blue-500'>로딩 중...</span>}
-        {error && <span className='ml-auto text-sm text-red-500'>{error}</span>}
-      </div>
+      <Header />
 
       <Timeline
         groups={groups}

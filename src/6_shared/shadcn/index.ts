@@ -14,3 +14,12 @@ export {
 export { Input } from './ui/input';
 export { Label } from './ui/label';
 export { Textarea } from './ui/textarea';
+export { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
+export {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from './ui/dropdown-menu';

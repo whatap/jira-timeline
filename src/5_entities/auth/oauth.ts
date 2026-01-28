@@ -4,8 +4,8 @@ import qs from 'query-string';
 const CLIENT_ID = import.meta.env.VITE_JIRA_CLIENT_ID;
 const SECRET = import.meta.env.VITE_JIRA_SECRET;
 const REDIRECT_URI = import.meta.env.PROD
-  ? 'https://whatap.github.io/jira-timeline/'
-  : 'http://localhost:3333/jira-timeline';
+  ? 'https://whatap.github.io/jira-timeline/callback'
+  : 'http://localhost:3333/jira-timeline/callback';
 
 export function getAuthorizationUrl() {
   return qs.stringifyUrl({
@@ -56,6 +56,32 @@ export async function getAccessibleResources(accessToken: string): Promise<
 > {
   return await ky
     .get('https://api.atlassian.com/oauth/token/accessible-resources', {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    })
+    .json();
+}
+
+export type JiraCurrentUser = {
+  accountId: string;
+  accountType: string;
+  displayName: string;
+  emailAddress?: string;
+  avatarUrls: {
+    '48x48': string;
+    '24x24': string;
+    '16x16': string;
+    '32x32': string;
+  };
+  active: boolean;
+  timeZone: string;
+  locale: string;
+};
+
+export async function getMyself(accessToken: string, cloudId: string): Promise<JiraCurrentUser> {
+  return await ky
+    .get(`https://api.atlassian.com/ex/jira/${cloudId}/rest/api/3/myself`, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },
