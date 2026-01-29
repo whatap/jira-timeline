@@ -86,22 +86,25 @@ function ImportUsersButton({ onImportComplete }: ImportUsersButtonProps) {
       abortControllerRef.current.signal,
     );
 
+    if (abortControllerRef.current.signal.aborted) {
+      setIsImporting(false);
+      return;
+    }
+
     setResult(validationResult);
 
-    if (!abortControllerRef.current.signal.aborted) {
-      let newUsers: JiraUser[];
+    let newUsers: JiraUser[];
 
-      if (importMode === 'merge') {
-        const existingIds = new Set(users.map((u) => u.id));
-        const newValidUsers = validationResult.validUsers.filter((u) => !existingIds.has(u.id));
-        newUsers = [...users, ...newValidUsers];
-      } else {
-        newUsers = validationResult.validUsers;
-      }
-
-      setUsers(newUsers);
-      onImportComplete?.(newUsers);
+    if (importMode === 'merge') {
+      const existingIds = new Set(users.map((u) => u.id));
+      const newValidUsers = validationResult.validUsers.filter((u) => !existingIds.has(u.id));
+      newUsers = [...users, ...newValidUsers];
+    } else {
+      newUsers = validationResult.validUsers;
     }
+
+    setUsers(newUsers);
+    onImportComplete?.(newUsers);
   }, [client, parsedUserIds, users, importMode, setUsers, onImportComplete]);
 
   const handleCancel = useCallback(() => {
@@ -109,9 +112,8 @@ function ImportUsersButton({ onImportComplete }: ImportUsersButtonProps) {
   }, []);
 
   const handleCloseProgress = useCallback(() => {
+    abortControllerRef.current?.abort();
     setIsImporting(false);
-    setProgress(null);
-    setResult(null);
   }, []);
 
   const handleCloseError = useCallback(() => {
