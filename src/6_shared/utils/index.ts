@@ -3,4 +3,5 @@ export {
   normalizeDateRange,
   getNonOverlappingRanges,
   mergeRanges,
+  subtractRange,
 } from './dateRangeUtils';

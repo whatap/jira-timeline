@@ -5,6 +5,7 @@ import {
   getNonOverlappingRanges,
   mergeRanges,
   normalizeDateRange,
+  subtractRange,
   type DateRange,
 } from '../dateRangeUtils';
 
@@ -218,6 +219,107 @@ describe('mergeRanges', () => {
       { start: '2024-01-10', end: '2024-01-20' },
     ]);
     expect(result).toEqual([{ start: '2024-01-01', end: '2024-01-31' }]);
+  });
+});
+
+describe('subtractRange', () => {
+  it('빈 배열에서 제거 시 빈 배열 반환', () => {
+    const result = subtractRange([], { start: '2024-01-01', end: '2024-01-31' });
+    expect(result).toEqual([]);
+  });
+
+  it('겹치지 않는 범위는 그대로 유지', () => {
+    const result = subtractRange(
+      [{ start: '2024-01-01', end: '2024-01-31' }],
+      { start: '2024-03-01', end: '2024-03-31' }
+    );
+    expect(result).toEqual([{ start: '2024-01-01', end: '2024-01-31' }]);
+  });
+
+  it('완전히 포함되는 범위 제거', () => {
+    const result = subtractRange(
+      [{ start: '2024-01-10', end: '2024-01-20' }],
+      { start: '2024-01-01', end: '2024-01-31' }
+    );
+    expect(result).toEqual([]);
+  });
+
+  it('동일한 범위 제거', () => {
+    const result = subtractRange(
+      [{ start: '2024-01-01', end: '2024-01-31' }],
+      { start: '2024-01-01', end: '2024-01-31' }
+    );
+    expect(result).toEqual([]);
+  });
+
+  it('범위 중간 부분 제거 (분할)', () => {
+    const result = subtractRange(
+      [{ start: '2024-01-01', end: '2024-01-31' }],
+      { start: '2024-01-10', end: '2024-01-20' }
+    );
+    expect(result).toEqual([
+      { start: '2024-01-01', end: '2024-01-09' },
+      { start: '2024-01-21', end: '2024-01-31' },
+    ]);
+  });
+
+  it('범위 시작 부분 제거', () => {
+    const result = subtractRange(
+      [{ start: '2024-01-01', end: '2024-01-31' }],
+      { start: '2024-01-01', end: '2024-01-15' }
+    );
+    expect(result).toEqual([{ start: '2024-01-16', end: '2024-01-31' }]);
+  });
+
+  it('범위 끝 부분 제거', () => {
+    const result = subtractRange(
+      [{ start: '2024-01-01', end: '2024-01-31' }],
+      { start: '2024-01-20', end: '2024-01-31' }
+    );
+    expect(result).toEqual([{ start: '2024-01-01', end: '2024-01-19' }]);
+  });
+
+  it('여러 범위에서 일부만 제거', () => {
+    const result = subtractRange(
+      [
+        { start: '2024-01-01', end: '2024-01-15' },
+        { start: '2024-02-01', end: '2024-02-15' },
+      ],
+      { start: '2024-01-10', end: '2024-01-20' }
+    );
+    expect(result).toEqual([
+      { start: '2024-01-01', end: '2024-01-09' },
+      { start: '2024-02-01', end: '2024-02-15' },
+    ]);
+  });
+
+  it('여러 범위 중 하나 완전 제거', () => {
+    const result = subtractRange(
+      [
+        { start: '2024-01-01', end: '2024-01-15' },
+        { start: '2024-02-01', end: '2024-02-15' },
+        { start: '2024-03-01', end: '2024-03-15' },
+      ],
+      { start: '2024-02-01', end: '2024-02-15' }
+    );
+    expect(result).toEqual([
+      { start: '2024-01-01', end: '2024-01-15' },
+      { start: '2024-03-01', end: '2024-03-15' },
+    ]);
+  });
+
+  it('제거 범위가 여러 범위에 걸쳐있는 경우', () => {
+    const result = subtractRange(
+      [
+        { start: '2024-01-01', end: '2024-01-31' },
+        { start: '2024-02-01', end: '2024-02-28' },
+      ],
+      { start: '2024-01-20', end: '2024-02-10' }
+    );
+    expect(result).toEqual([
+      { start: '2024-01-01', end: '2024-01-19' },
+      { start: '2024-02-11', end: '2024-02-28' },
+    ]);
   });
 });
 

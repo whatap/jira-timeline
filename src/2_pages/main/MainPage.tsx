@@ -1,5 +1,5 @@
 import moment from 'moment';
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Timeline, {
   DateHeader,
   SidebarHeader,
@@ -9,7 +9,9 @@ import Timeline, {
 } from 'react-calendar-timeline';
 
 import { Header } from '@/3_widgets/header';
+import { RefreshVisibleRangeButton } from '@/4_features/refresh-visible-range';
 import { UserRegisterModal } from '@/4_features/user-register-modal';
+import { useRefreshToken } from '@/5_entities/auth';
 import { getIssues, useIssueStore } from '@/5_entities/jira';
 import { useClientStore } from '@/5_entities/jira/jiraClientStore';
 import { useUserStore } from '@/5_entities/user';
@@ -42,16 +44,26 @@ function debounce<T extends (...args: Parameters<T>) => void>(fn: T, delay: numb
 function MainPage() {
   const { client } = useClientStore();
   const { users } = useUserStore();
+  const { refresh: refreshToken } = useRefreshToken();
   const {
     issues,
     fetchedRanges,
     addIssues,
     addFetchedRange,
+    removeFetchedRange,
     incrementLoading,
     decrementLoading,
     setError,
     clear,
+    isLoading,
   } = useIssueStore();
+
+  // 현재 보이는 구간 저장 (새로고침 시 사용)
+  // Timeline의 defaultTimeStart/End와 동일한 초기값 설정
+  const [visibleRange, setVisibleRange] = useState<DateRange>(() => ({
+    start: moment().add(-1, 'month').format('YYYY-MM-DD'),
+    end: moment().add(1, 'month').format('YYYY-MM-DD'),
+  }));
 
   // 조회 중인 구간을 추적 (중복 요청 방지)
   const fetchingRanges = useRef<Set<string>>(new Set());
@@ -81,6 +93,9 @@ function MainPage() {
         const newIssues = await getIssues(client, range);
         addIssues(newIssues);
         addFetchedRange(range);
+
+        // API 호출 성공 시 토큰 갱신 (세션 연장)
+        refreshToken();
       } catch (err) {
         const message = err instanceof Error ? err.message : '이슈 조회 중 오류가 발생했습니다.';
         setError(message);
@@ -90,7 +105,7 @@ function MainPage() {
         decrementLoading();
       }
     },
-    [addIssues, addFetchedRange, incrementLoading, decrementLoading, setError],
+    [addIssues, addFetchedRange, incrementLoading, decrementLoading, setError, refreshToken],
   );
 
   // 필요한 구간들 조회 (ref에서 최신 상태 참조)
@@ -179,9 +194,29 @@ function MainPage() {
 
       // 스크롤 캔버스는 즉시 업데이트
       updateScrollCanvas(visibleTimeStart, visibleTimeEnd);
+
+      // 현재 보이는 범위 저장 (새로고침 시 사용)
+      setVisibleRange({
+        start: moment(visibleTimeStart).format('YYYY-MM-DD'),
+        end: moment(visibleTimeEnd).format('YYYY-MM-DD'),
+      });
     },
     [],
   );
+
+  // 현재 구간 새로고침 핸들러
+  const handleRefreshVisibleRange = useCallback(() => {
+    // fetchedRanges에서 현재 범위 제거
+    removeFetchedRange(visibleRange);
+
+    // stateRef 업데이트 (fetchRangesIfNeeded가 참조하는 값)
+    stateRef.current.fetchedRanges = useIssueStore.getState().fetchedRanges;
+
+    // 재조회 트리거 (버퍼 포함)
+    const start = moment(visibleRange.start).valueOf();
+    const end = moment(visibleRange.end).valueOf();
+    fetchRangesIfNeeded(start, end);
+  }, [visibleRange, removeFetchedRange, fetchRangesIfNeeded]);
 
   // store의 issues를 배열로 변환
   const issueList = useMemo(() => Object.values(issues), [issues]);
@@ -334,6 +369,11 @@ function MainPage() {
           />
         </TimelineHeaders>
       </Timeline>
+
+      <RefreshVisibleRangeButton
+        onRefresh={handleRefreshVisibleRange}
+        isLoading={isLoading()}
+      />
     </div>
   );
 }
