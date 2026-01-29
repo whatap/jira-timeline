@@ -125,3 +125,65 @@ export function mergeRanges(ranges: DateRange[]): DateRange[] {
 
   return merged;
 }
+
+/**
+ * 범위 배열에서 특정 범위를 제거
+ * @param ranges 기존 범위 배열
+ * @param rangeToRemove 제거할 범위
+ * @returns 제거 후 남은 범위 배열
+ */
+export function subtractRange(ranges: DateRange[], rangeToRemove: DateRange): DateRange[] {
+  if (ranges.length === 0) return [];
+
+  const result: DateRange[] = [];
+  const removeStart = moment(rangeToRemove.start);
+  const removeEnd = moment(rangeToRemove.end);
+
+  for (const range of ranges) {
+    const rangeStart = moment(range.start);
+    const rangeEnd = moment(range.end);
+
+    // 제거 범위와 전혀 겹치지 않는 경우 그대로 유지
+    if (rangeEnd.isBefore(removeStart) || rangeStart.isAfter(removeEnd)) {
+      result.push({ ...range });
+      continue;
+    }
+
+    // 제거 범위가 현재 범위를 완전히 포함하는 경우 제거
+    if (removeStart.isSameOrBefore(rangeStart) && removeEnd.isSameOrAfter(rangeEnd)) {
+      continue;
+    }
+
+    // 제거 범위가 현재 범위 중간에 있는 경우 분할
+    if (removeStart.isAfter(rangeStart) && removeEnd.isBefore(rangeEnd)) {
+      result.push({
+        start: range.start,
+        end: removeStart.clone().subtract(1, 'day').format('YYYY-MM-DD'),
+      });
+      result.push({
+        start: removeEnd.clone().add(1, 'day').format('YYYY-MM-DD'),
+        end: range.end,
+      });
+      continue;
+    }
+
+    // 제거 범위가 현재 범위 시작 부분과 겹치는 경우
+    if (removeStart.isSameOrBefore(rangeStart) && removeEnd.isBefore(rangeEnd)) {
+      result.push({
+        start: removeEnd.clone().add(1, 'day').format('YYYY-MM-DD'),
+        end: range.end,
+      });
+      continue;
+    }
+
+    // 제거 범위가 현재 범위 끝 부분과 겹치는 경우
+    if (removeStart.isAfter(rangeStart) && removeEnd.isSameOrAfter(rangeEnd)) {
+      result.push({
+        start: range.start,
+        end: removeStart.clone().subtract(1, 'day').format('YYYY-MM-DD'),
+      });
+    }
+  }
+
+  return result;
+}

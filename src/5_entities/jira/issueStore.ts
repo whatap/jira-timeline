@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-import { type DateRange, mergeRanges } from '@/6_shared/utils';
+import { type DateRange, mergeRanges, subtractRange } from '@/6_shared/utils';
 
 import type { Issue } from './jira';
 
@@ -17,6 +17,7 @@ interface IssueStore {
   // 액션
   addIssues: (newIssues: Issue[]) => void;
   addFetchedRange: (range: DateRange) => void;
+  removeFetchedRange: (range: DateRange) => void;
   incrementLoading: () => void;
   decrementLoading: () => void;
   setError: (error: string | null) => void;
@@ -45,6 +46,11 @@ export const useIssueStore = create<IssueStore>((set, get) => ({
       const merged = mergeRanges([...state.fetchedRanges, range]);
       return { fetchedRanges: merged };
     }),
+
+  removeFetchedRange: (range) =>
+    set((state) => ({
+      fetchedRanges: subtractRange(state.fetchedRanges, range),
+    })),
 
   incrementLoading: () =>
     set((state) => ({
