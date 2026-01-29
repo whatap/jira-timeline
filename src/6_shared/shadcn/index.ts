@@ -23,3 +23,4 @@ export {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from './ui/dropdown-menu';
+export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from './ui/tooltip';
