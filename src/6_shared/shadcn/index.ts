@@ -24,3 +24,4 @@ export {
   DropdownMenuSeparator,
 } from './ui/dropdown-menu';
 export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from './ui/tooltip';
+export { Progress } from './ui/progress';

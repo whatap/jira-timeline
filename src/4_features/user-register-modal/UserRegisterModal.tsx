@@ -1,6 +1,8 @@
 import { Loader2, RefreshCw } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { ExportUsersButton } from '@/4_features/export-users';
+import { ImportUsersButton } from '@/4_features/import-users';
 import { getJiraUser, useClientStore } from '@/5_entities/jira';
 import { type JiraUser, useUserStore } from '@/5_entities/user';
 import {
@@ -58,9 +60,7 @@ function UserRegisterModal() {
     async (index: number, accountId: string) => {
       if (!client || !accountId.trim()) return;
 
-      setRows((prev) =>
-        prev.map((row, i) => (i === index ? { ...row, isLoading: true, hasError: false } : row)),
-      );
+      setRows((prev) => prev.map((row, i) => (i === index ? { ...row, isLoading: true, hasError: false } : row)));
 
       const userInfo = await getJiraUser(client, accountId.trim());
 
@@ -84,9 +84,7 @@ function UserRegisterModal() {
   const handleIdChange = (index: number, value: string) => {
     setRows((prev) =>
       prev.map((row, i) =>
-        i === index
-          ? { ...row, id: value, displayName: undefined, isVerified: false, hasError: false }
-          : row,
+        i === index ? { ...row, id: value, displayName: undefined, isVerified: false, hasError: false } : row,
       ),
     );
 
@@ -107,9 +105,7 @@ function UserRegisterModal() {
     if (cachedUser) {
       setRows((prev) =>
         prev.map((row, i) =>
-          i === index
-            ? { ...row, displayName: cachedUser.displayName, isVerified: true, hasError: false }
-            : row,
+          i === index ? { ...row, displayName: cachedUser.displayName, isVerified: true, hasError: false } : row,
         ),
       );
       return;
@@ -172,6 +168,20 @@ function UserRegisterModal() {
     setOpen(false);
   };
 
+  const handleImportComplete = useCallback((importedUsers: JiraUser[]) => {
+    const newRows: UserRow[] =
+      importedUsers.length > 0
+        ? importedUsers.map((u) => ({
+            id: u.id,
+            displayName: u.displayName,
+            isVerified: u.isVerified,
+            isLoading: false,
+            hasError: !u.isVerified,
+          }))
+        : [{ id: '', displayName: undefined, isVerified: false, isLoading: false, hasError: false }];
+    setRows(newRows);
+  }, []);
+
   // 컴포넌트 언마운트 시 타이머 정리
   useEffect(() => {
     return () => {
@@ -182,66 +192,65 @@ function UserRegisterModal() {
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button variant="outline">사용자 관리</Button>
+        <Button variant='outline'>사용자 관리</Button>
       </DialogTrigger>
-      <DialogContent className="max-w-xl max-h-[80vh] flex flex-col">
-        <DialogHeader>
+      <DialogContent className='max-w-xl max-h-[80vh] flex flex-col' onOpenAutoFocus={(e) => e.preventDefault()}>
+        <DialogHeader className='flex flex-row items-center justify-between  mt-4'>
           <DialogTitle>사용자 등록</DialogTitle>
+          <div className='flex gap-1'>
+            <ExportUsersButton />
+            <ImportUsersButton onImportComplete={handleImportComplete} />
+          </div>
         </DialogHeader>
 
-        <div className="flex flex-col gap-2 min-h-0 flex-1 overflow-y-auto p-1">
+        <div className='flex flex-col gap-2 min-h-0 flex-1 overflow-y-auto p-1'>
           {rows.map((row, index) => (
-            <div key={index} className="flex items-center gap-2">
-              <span className="w-6 text-center text-sm text-muted-foreground">{index + 1}</span>
+            <div key={index} className='flex items-center gap-2'>
+              <span className='w-6 text-center text-sm text-muted-foreground'>{index + 1}</span>
               <Input
                 ref={(el) => {
                   inputRefs.current[index] = el;
                 }}
-                placeholder="Jira ID (Account ID)"
+                placeholder='Jira ID (Account ID)'
                 value={row.id}
                 onChange={(e) => handleIdChange(index, e.target.value)}
                 disabled={row.isLoading}
-                className="flex-1"
+                className='flex-1'
               />
               {/* 상태 표시 영역 */}
-              <div className="w-32 h-9 flex items-center">
+              <div className='w-32 h-9 flex items-center'>
                 {row.isLoading ? (
-                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                  <Loader2 className='h-5 w-5 animate-spin text-muted-foreground' />
                 ) : row.isVerified && row.displayName ? (
-                  <span className="text-sm truncate" title={row.displayName}>
+                  <span className='text-sm truncate' title={row.displayName}>
                     {row.displayName}
                   </span>
                 ) : row.hasError ? (
-                  <div className="flex items-center gap-1">
-                    <span className="text-sm text-red-500">조회 실패</span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleRetry(index)}
-                      className="h-6 w-6 p-0"
-                    >
-                      <RefreshCw className="h-4 w-4" />
+                  <div className='flex items-center gap-1'>
+                    <span className='text-sm text-red-500'>조회 실패</span>
+                    <Button variant='ghost' size='sm' onClick={() => handleRetry(index)} className='h-6 w-6 p-0'>
+                      <RefreshCw className='h-4 w-4' />
                     </Button>
                   </div>
                 ) : row.id.trim() ? (
-                  <span className="text-sm text-muted-foreground">조회 중...</span>
+                  <span className='text-sm text-muted-foreground'>조회 중...</span>
                 ) : (
-                  <span className="text-sm text-muted-foreground">없음</span>
+                  <span className='text-sm text-muted-foreground'>없음</span>
                 )}
               </div>
-              <Button variant="ghost" size="sm" onClick={() => handleRemoveRow(index)} className="px-2">
+              <Button variant='ghost' size='sm' onClick={() => handleRemoveRow(index)} className='px-2'>
                 ✕
               </Button>
             </div>
           ))}
         </div>
 
-        <Button variant="outline" onClick={handleAddRow} className="w-full">
+        <Button variant='outline' onClick={handleAddRow} className='w-full'>
           + 사용자 추가
         </Button>
 
         <DialogFooter>
-          <Button variant="secondary" onClick={() => setOpen(false)}>
+          <Button variant='secondary' onClick={() => setOpen(false)}>
             취소
           </Button>
           <Button onClick={handleSave}>저장</Button>
