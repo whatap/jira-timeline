@@ -50,7 +50,7 @@ function TokenCountdown({ onExpired }: { onExpired: () => void }) {
   const isExpired = remainingTime <= 0;
 
   return (
-    <TooltipProvider>
+    <TooltipProvider delayDuration={50}>
       <Tooltip>
         <TooltipTrigger asChild>
           <span
