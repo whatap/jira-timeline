@@ -13,7 +13,7 @@ export function getAuthorizationUrl() {
     query: {
       audience: 'api.atlassian.com',
       client_id: CLIENT_ID,
-      scope: 'read:jira-work read:jira-user read:me',
+      scope: 'read:jira-work read:jira-user read:me offline_access',
       redirect_uri: REDIRECT_URI,
       state: new Date().getTime().toString(),
       response_type: 'code',
@@ -28,6 +28,7 @@ export function parseOauthCodeBySelf(): { code?: string; state?: string } {
 
 export async function exchangeAuthCodeForAccessToken(authCode: string): Promise<{
   access_token: string;
+  refresh_token: string;
   expires_in: number;
   scope: string;
   token_type: string;
@@ -40,6 +41,25 @@ export async function exchangeAuthCodeForAccessToken(authCode: string): Promise<
         client_secret: SECRET,
         code: authCode,
         redirect_uri: REDIRECT_URI,
+      },
+    })
+    .json();
+}
+
+export async function refreshAccessToken(refreshToken: string): Promise<{
+  access_token: string;
+  refresh_token: string;
+  expires_in: number;
+  scope: string;
+  token_type: string;
+}> {
+  return await ky
+    .post('https://auth.atlassian.com/oauth/token', {
+      json: {
+        grant_type: 'refresh_token',
+        client_id: CLIENT_ID,
+        client_secret: SECRET,
+        refresh_token: refreshToken,
       },
     })
     .json();

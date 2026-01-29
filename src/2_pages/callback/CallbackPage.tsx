@@ -6,7 +6,7 @@ import { exchangeAuthCodeForAccessToken, getAccessibleResources, getMyself, pars
 import { useClientStore } from '@/5_entities/jira/jiraClientStore';
 
 function CallbackPage() {
-  const { setAccessToken, setCloudId, setCurrentUser } = useAuthStore();
+  const { setAccessToken, setRefreshToken, setExpiresAt, setCloudId, setCurrentUser } = useAuthStore();
   const { initClient } = useClientStore();
   const navigate = useNavigate();
 
@@ -20,10 +20,15 @@ function CallbackPage() {
 
     (async () => {
       try {
-        const { access_token: accessToken } = await exchangeAuthCodeForAccessToken(code);
+        const { access_token: accessToken, refresh_token: refreshToken, expires_in: expiresIn } =
+          await exchangeAuthCodeForAccessToken(code);
         const { id: cloudId } = (await getAccessibleResources(accessToken))[0];
 
+        const expiresAt = Date.now() + expiresIn * 1000;
+
         setAccessToken(accessToken);
+        setRefreshToken(refreshToken);
+        setExpiresAt(expiresAt);
         setCloudId(cloudId);
         initClient(accessToken, cloudId);
 
@@ -36,7 +41,7 @@ function CallbackPage() {
         navigate('/login', { replace: true });
       }
     })();
-  }, [navigate, setAccessToken, setCloudId, setCurrentUser, initClient]);
+  }, [navigate, setAccessToken, setRefreshToken, setExpiresAt, setCloudId, setCurrentUser, initClient]);
 
   return (
     <div className='flex flex-col items-center justify-center min-h-screen bg-gray-50'>
