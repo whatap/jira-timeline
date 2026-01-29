@@ -1,5 +1,5 @@
 import { Loader2, RefreshCw } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { ExportUsersButton } from '@/4_features/export-users';
 import { ImportUsersButton } from '@/4_features/import-users';
@@ -182,6 +182,19 @@ function UserRegisterModal() {
     setRows(newRows);
   }, []);
 
+  // Import 시 현재 모달의 rows를 JiraUser 형태로 변환
+  const currentUsersForImport = useMemo<JiraUser[]>(
+    () =>
+      rows
+        .filter((row) => row.id.trim() !== '')
+        .map((row) => ({
+          id: row.id.trim(),
+          displayName: row.displayName,
+          isVerified: row.isVerified,
+        })),
+    [rows],
+  );
+
   // 컴포넌트 언마운트 시 타이머 정리
   useEffect(() => {
     return () => {
@@ -198,8 +211,8 @@ function UserRegisterModal() {
         <DialogHeader className='flex flex-row items-center justify-between  mt-4'>
           <DialogTitle>사용자 등록</DialogTitle>
           <div className='flex gap-1'>
-            <ExportUsersButton />
-            <ImportUsersButton onImportComplete={handleImportComplete} />
+            <ExportUsersButton users={currentUsersForImport} />
+            <ImportUsersButton currentUsers={currentUsersForImport} onImportComplete={handleImportComplete} />
           </div>
         </DialogHeader>
 

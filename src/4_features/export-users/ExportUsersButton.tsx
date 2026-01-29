@@ -1,13 +1,15 @@
 import { Upload } from 'lucide-react';
 
-import { useUserStore } from '@/5_entities/user';
+import type { JiraUser } from '@/5_entities/user';
 import { Button, Tooltip, TooltipContent, TooltipTrigger } from '@/6_shared/shadcn';
 
 import { exportUsersToJson } from './util/exportUsersToJson';
 
-function ExportUsersButton() {
-  const { users } = useUserStore();
+type ExportUsersButtonProps = {
+  users: JiraUser[];
+};
 
+function ExportUsersButton({ users }: ExportUsersButtonProps) {
   const handleExport = () => {
     if (users.length === 0) {
       return;

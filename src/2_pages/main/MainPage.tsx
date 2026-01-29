@@ -140,12 +140,24 @@ function MainPage() {
 
   // 사용자 목록 변경 시 데이터 초기화 및 재조회
   const isFirstMount = useRef(true);
+  const prevUserIdsRef = useRef<string>('');
+
   useEffect(() => {
     if (isFirstMount.current) {
       isFirstMount.current = false;
+      // 초기 사용자 ID 목록 저장
+      prevUserIdsRef.current = users.map((u) => u.id).join(',');
       return;
     }
     if (!client) return;
+
+    // 사용자 ID 목록이 실제로 변경되었는지 확인
+    const currentUserIds = users.map((u) => u.id).join(',');
+    if (prevUserIdsRef.current === currentUserIds) {
+      // ID 목록이 동일하면 재조회하지 않음
+      return;
+    }
+    prevUserIdsRef.current = currentUserIds;
 
     // 기존 데이터 초기화
     clear();

@@ -2,7 +2,7 @@ import { Download } from 'lucide-react';
 import { useCallback, useRef, useState } from 'react';
 
 import { useClientStore } from '@/5_entities/jira';
-import { type JiraUser, useUserStore } from '@/5_entities/user';
+import type { JiraUser } from '@/5_entities/user';
 import {
   Button,
   Dialog,
@@ -23,15 +23,15 @@ import { type ValidationProgress, type ValidationResult, validateUsers } from '.
 type ImportMode = 'merge' | 'replace';
 
 type ImportUsersButtonProps = {
+  currentUsers: JiraUser[];
   onImportComplete?: (users: JiraUser[]) => void;
 };
 
-function ImportUsersButton({ onImportComplete }: ImportUsersButtonProps) {
+function ImportUsersButton({ currentUsers, onImportComplete }: ImportUsersButtonProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const { client } = useClientStore();
-  const { users, setUsers } = useUserStore();
 
   const [parsedUserIds, setParsedUserIds] = useState<string[]>([]);
   const [showModeDialog, setShowModeDialog] = useState(false);
@@ -76,7 +76,7 @@ function ImportUsersButton({ onImportComplete }: ImportUsersButtonProps) {
 
     abortControllerRef.current = new AbortController();
 
-    const existingUsers = importMode === 'merge' ? users : [];
+    const existingUsers = importMode === 'merge' ? currentUsers : [];
 
     const validationResult = await validateUsers(
       client,
@@ -96,16 +96,15 @@ function ImportUsersButton({ onImportComplete }: ImportUsersButtonProps) {
     let newUsers: JiraUser[];
 
     if (importMode === 'merge') {
-      const existingIds = new Set(users.map((u) => u.id));
+      const existingIds = new Set(currentUsers.map((u) => u.id));
       const newValidUsers = validationResult.validUsers.filter((u) => !existingIds.has(u.id));
-      newUsers = [...users, ...newValidUsers];
+      newUsers = [...currentUsers, ...newValidUsers];
     } else {
       newUsers = validationResult.validUsers;
     }
 
-    setUsers(newUsers);
     onImportComplete?.(newUsers);
-  }, [client, parsedUserIds, users, importMode, setUsers, onImportComplete]);
+  }, [client, parsedUserIds, currentUsers, importMode, onImportComplete]);
 
   const handleCancel = useCallback(() => {
     abortControllerRef.current?.abort();
