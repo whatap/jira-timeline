@@ -12,7 +12,7 @@ type RefreshVisibleRangeButtonProps = {
 function RefreshVisibleRangeButton({ onRefresh, isLoading, disabled = false }: RefreshVisibleRangeButtonProps) {
   return (
     <TooltipProvider>
-      <Tooltip>
+      <Tooltip delayDuration={50}>
         <TooltipTrigger asChild>
           <Button
             className='fixed bottom-6 right-6 rounded-full shadow-lg z-10'
