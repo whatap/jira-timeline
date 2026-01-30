@@ -2,6 +2,15 @@ import { Version3Client } from 'jira.js';
 
 import type { DateRange } from '@/6_shared/utils';
 
+// StatusCategory 타입 정의
+export type StatusCategoryKey = 'new' | 'indeterminate' | 'done';
+
+export interface StatusCategory {
+  key: StatusCategoryKey;
+  colorName: string;
+  name: string;
+}
+
 // Issue 타입 정의
 export interface Issue {
   key: string;
@@ -14,6 +23,7 @@ export interface Issue {
   endTime: string; // YYYY-MM-DD
   issueType?: string;
   status?: string;
+  statusCategory?: StatusCategory;
   link: string;
 }
 
@@ -25,7 +35,14 @@ interface JiraIssueResponse {
     creator?: { displayName?: string } | null;
     summary?: string | null;
     issuetype?: { name?: string } | null;
-    status?: { name?: string } | null;
+    status?: {
+      name?: string;
+      statusCategory?: {
+        key?: string;
+        colorName?: string;
+        name?: string;
+      };
+    } | null;
     customfield_10156?: string | null; // 시작일
     customfield_10157?: string | null; // 종료일
   };
@@ -76,6 +93,7 @@ export async function getIssues(client: Version3Client, dateRange: DateRange): P
   const allIssues: Issue[] = [];
   results.forEach(({ userId, issues }) => {
     issues.forEach((issue) => {
+      const statusCat = issue.fields.status?.statusCategory;
       allIssues.push({
         key: issue.key,
         userId,
@@ -87,6 +105,13 @@ export async function getIssues(client: Version3Client, dateRange: DateRange): P
         endTime: issue.fields.customfield_10157 ?? '',
         issueType: issue.fields.issuetype?.name,
         status: issue.fields.status?.name,
+        statusCategory: statusCat?.key
+          ? {
+              key: statusCat.key as StatusCategoryKey,
+              colorName: statusCat.colorName ?? '',
+              name: statusCat.name ?? '',
+            }
+          : undefined,
         link: `https://whatap-labs.atlassian.net/browse/${issue.key}`,
       });
     });
