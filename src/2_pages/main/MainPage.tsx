@@ -12,9 +12,10 @@ import { Header } from '@/3_widgets/header';
 import { RefreshVisibleRangeButton } from '@/4_features/refresh-visible-range';
 import { UserRegisterModal } from '@/4_features/user-register-modal';
 import { useRefreshToken } from '@/5_entities/auth';
-import { getIssues, useIssueStore } from '@/5_entities/jira';
+import { getIssues, getStatusColors, useIssueStore } from '@/5_entities/jira';
 import { useClientStore } from '@/5_entities/jira/jiraClientStore';
 import { useUserStore } from '@/5_entities/user';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/6_shared/shadcn';
 import { type DateRange, getNonOverlappingRanges, normalizeDateRange } from '@/6_shared/utils';
 
 /**
@@ -242,6 +243,8 @@ function MainPage() {
         title: issue.summary,
         start_time: moment(issue.startTime),
         end_time: moment(issue.endTime).add(1, 'day'),
+        statusCategory: issue.statusCategory,
+        statusName: issue.status,
       }));
   }, [issueList]);
 
@@ -276,46 +279,62 @@ function MainPage() {
         lineHeight={60}
         itemRenderer={({ item, itemContext, getItemProps, getResizeProps }) => {
           const { left: leftResizeProps, right: rightResizeProps } = getResizeProps();
+          const colors = getStatusColors(item.statusCategory?.key);
           return (
-            <div
-              {...getItemProps({
-                style: { padding: '0 3px', background: 'none', border: 'none' },
-              })}
-              onClick={() => {
-                window.open(`https://whatap-labs.atlassian.net/browse/${item.id}`, '_blank');
-              }}
-            >
-              <div
-                style={{
-                  backgroundColor: '#dddddd88',
-                  color: '#666',
-                  borderColor: '#666',
-                  borderStyle: 'solid',
-                  borderWidth: itemContext.selected ? 3 : 1,
-                  borderRadius: 4,
-                  boxSizing: 'border-box',
-                  height: itemContext.dimensions.height,
-                }}
-              >
-                {itemContext.useResizeHandle ? <div {...leftResizeProps} /> : null}
+            <TooltipProvider delayDuration={200}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div
+                    {...getItemProps({
+                      style: { padding: '0 3px', background: 'none', border: 'none' },
+                    })}
+                    onClick={() => {
+                      window.open(`https://whatap-labs.atlassian.net/browse/${item.id}`, '_blank');
+                    }}
+                  >
+                    <div
+                      style={{
+                        backgroundColor: colors.backgroundColor,
+                        color: colors.textColor,
+                        borderColor: colors.borderColor,
+                        borderStyle: 'solid',
+                        borderWidth: itemContext.selected ? 3 : 1,
+                        borderRadius: 4,
+                        boxSizing: 'border-box',
+                        height: itemContext.dimensions.height,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {itemContext.useResizeHandle ? <div {...leftResizeProps} /> : null}
 
-                <div
-                  style={{
-                    overflow: 'hidden',
-                    paddingLeft: 3,
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                    display: 'flex',
-                    alignItems: 'center',
-                    height: '100%',
-                  }}
-                >
-                  {itemContext.title}
-                </div>
+                      <div
+                        style={{
+                          overflow: 'hidden',
+                          paddingLeft: 3,
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          display: 'flex',
+                          alignItems: 'center',
+                          height: '100%',
+                        }}
+                      >
+                        {itemContext.title}
+                      </div>
 
-                {itemContext.useResizeHandle ? <div {...rightResizeProps} /> : null}
-              </div>
-            </div>
+                      {itemContext.useResizeHandle ? <div {...rightResizeProps} /> : null}
+                    </div>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <div className="text-sm">
+                    <div className="font-medium">{itemContext.title}</div>
+                    {item.statusName && (
+                      <div style={{ color: colors.textColor }}>{item.statusName}</div>
+                    )}
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           );
         }}
         sidebarWidth={150}
