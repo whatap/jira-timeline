@@ -1,9 +1,7 @@
-import { useState } from 'react';
-
 import { TokenCountdown } from '@/4_features/token-countdown';
-import { TokenExpiredModal } from '@/4_features/token-expired-modal';
+import { TokenRefreshFailedModal } from '@/4_features/token-refresh-failed-modal';
 import { UserRegisterModal } from '@/4_features/user-register-modal';
-import { useAuth, useAuthStore } from '@/5_entities/auth';
+import { useAuth, useAuthStore, useAutoRefreshToken } from '@/5_entities/auth';
 import { useIssueStore } from '@/5_entities/jira';
 import {
   Avatar,
@@ -18,10 +16,15 @@ import {
 } from '@/6_shared/shadcn';
 
 function Header() {
-  const [showExpiredModal, setShowExpiredModal] = useState(false);
   const { logout } = useAuth();
   const { currentUser } = useAuthStore();
   const { isLoading, error } = useIssueStore();
+  const { isRefreshFailed, resetFailedState } = useAutoRefreshToken();
+
+  const handleRefreshFailedClose = () => {
+    resetFailedState();
+    logout();
+  };
 
   const displayName = currentUser?.displayName ?? '사용자';
   const avatarUrl = currentUser?.avatarUrls?.['32x32'];
@@ -31,18 +34,14 @@ function Header() {
     <div className='flex items-center gap-2 p-2 border-b'>
       <UserRegisterModal />
 
-      <TokenExpiredModal
-        open={showExpiredModal}
-        onClose={() => setShowExpiredModal(false)}
-        onLogout={logout}
-      />
+      <TokenRefreshFailedModal open={isRefreshFailed} onClose={handleRefreshFailedClose} />
 
       <div className='flex-1' />
 
       {isLoading() && <span className='text-sm text-blue-500'>로딩 중...</span>}
       {error && <span className='text-sm text-red-500'>{error}</span>}
 
-      <TokenCountdown onExpired={() => setShowExpiredModal(true)} />
+      <TokenCountdown />
 
       <DropdownMenu>
         <DropdownMenuTrigger className='flex items-center gap-2 px-2 py-1 rounded hover:bg-gray-100 cursor-pointer'>
