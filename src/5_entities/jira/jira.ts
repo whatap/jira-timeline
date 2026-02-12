@@ -2,6 +2,8 @@ import { Version3Client } from 'jira.js';
 
 import type { DateRange } from '@/6_shared/utils';
 
+import { type DateSource, resolveDateSource } from './util/resolveDateSource';
+
 // StatusCategory 타입 정의
 export type StatusCategoryKey = 'new' | 'indeterminate' | 'done';
 
@@ -21,6 +23,7 @@ export interface Issue {
   summary: string;
   startTime: string; // YYYY-MM-DD
   endTime: string; // YYYY-MM-DD
+  dateSource: DateSource;
   issueType?: string;
   status?: string;
   statusCategory?: StatusCategory;
@@ -43,8 +46,10 @@ interface JiraIssueResponse {
         name?: string;
       };
     } | null;
-    customfield_10156?: string | null; // 시작일
-    customfield_10157?: string | null; // 종료일
+    customfield_10156?: string | null; // 예정된 시작일
+    customfield_10157?: string | null; // 예정된 종료일
+    customfield_10015?: string | null; // Start date
+    duedate?: string | null; // 기한
   };
 }
 
@@ -78,21 +83,44 @@ export async function getIssues(client: Version3Client, dateRange: DateRange): P
     return [];
   }
 
-  const results = await Promise.all(
+  // 1순위: 예정된 시작/종료 날짜로 조회
+  const plannedResults = await Promise.all(
     userIdList.map(async (userId: string) => {
       const response = await client.issueSearch.searchForIssuesUsingJqlEnhancedSearch({
         jql: `assignee IN (${userId}) AND "예정된 시작 날짜[date]" IS NOT EMPTY AND customfield_10157 >= "${dateRange.start}" AND customfield_10157 <= "${dateRange.end}"`,
-        fields: ['assignee', 'creator', 'summary', 'issuetype', 'status', 'customfield_10156', 'customfield_10157'],
+        fields: ['assignee', 'creator', 'summary', 'issuetype', 'status', 'customfield_10156', 'customfield_10157', 'customfield_10015', 'duedate'],
         maxResults: 200,
       });
       return { userId, issues: (response.issues as JiraIssueResponse[]) ?? [] };
     }),
   );
 
-  // API 응답을 Issue 타입으로 변환 (userId 포함)
+  // 2순위: Start date / 기한으로 조회 (실패해도 1순위 결과는 유지)
+  let startDueResults: { userId: string; issues: JiraIssueResponse[] }[] = [];
+  try {
+    startDueResults = await Promise.all(
+      userIdList.map(async (userId: string) => {
+        const response = await client.issueSearch.searchForIssuesUsingJqlEnhancedSearch({
+          jql: `assignee IN (${userId}) AND "start date[date]" IS NOT EMPTY AND due >= "${dateRange.start}" AND due <= "${dateRange.end}"`,
+          fields: ['assignee', 'creator', 'summary', 'issuetype', 'status', 'customfield_10156', 'customfield_10157', 'customfield_10015', 'duedate'],
+          maxResults: 200,
+        });
+        return { userId, issues: (response.issues as JiraIssueResponse[]) ?? [] };
+      }),
+    );
+  } catch (err) {
+    console.warn('Start date/기한 조회 실패 (무시됨):', err);
+  }
+
+  const results = [...plannedResults, ...startDueResults];
+
+  // API 응답을 Issue 타입으로 변환 (userId 포함, 날짜 해석 불가 이슈 제외)
   const allIssues: Issue[] = [];
   results.forEach(({ userId, issues }) => {
     issues.forEach((issue) => {
+      const resolved = resolveDateSource(issue.fields);
+      if (!resolved) return;
+
       const statusCat = issue.fields.status?.statusCategory;
       allIssues.push({
         key: issue.key,
@@ -101,8 +129,9 @@ export async function getIssues(client: Version3Client, dateRange: DateRange): P
         assignee: issue.fields.assignee?.displayName ?? '',
         creator: issue.fields.creator?.displayName ?? '',
         summary: issue.fields.summary ?? '',
-        startTime: issue.fields.customfield_10156 ?? '',
-        endTime: issue.fields.customfield_10157 ?? '',
+        startTime: resolved.startTime,
+        endTime: resolved.endTime,
+        dateSource: resolved.dateSource,
         issueType: issue.fields.issuetype?.name,
         status: issue.fields.status?.name,
         statusCategory: statusCat?.key
