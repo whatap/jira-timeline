@@ -14,7 +14,7 @@ function formatTime(ms: number): string {
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
 
-function TokenCountdown({ onExpired }: { onExpired: () => void }) {
+function TokenCountdown() {
   const { expiresAt } = useAuthStore();
   const { refresh, isRefreshing } = useRefreshToken();
   const [remainingTime, setRemainingTime] = useState<number>(0);
@@ -26,14 +26,6 @@ function TokenCountdown({ onExpired }: { onExpired: () => void }) {
     const updateRemainingTime = () => {
       const remaining = expiresAt - Date.now();
       setRemainingTime(remaining);
-
-      if (remaining <= 0) {
-        if (intervalRef.current) {
-          clearInterval(intervalRef.current);
-          intervalRef.current = null;
-        }
-        onExpired();
-      }
     };
 
     updateRemainingTime();
@@ -45,7 +37,7 @@ function TokenCountdown({ onExpired }: { onExpired: () => void }) {
         intervalRef.current = null;
       }
     };
-  }, [expiresAt, onExpired]);
+  }, [expiresAt]);
 
   if (!expiresAt) return null;
 

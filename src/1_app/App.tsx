@@ -1,6 +1,7 @@
 import { QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import 'react-calendar-timeline/lib/Timeline.css';
+import { Toaster } from 'sonner';
 
 import { CallbackPage } from '@/2_pages/callback';
 import { LoginPage } from '@/2_pages/login';
@@ -17,6 +18,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
+        <Toaster position="top-center" />
         <BrowserRouter basename={BASENAME}>
           <Routes>
             <Route path='/login' element={<LoginPage />} />
