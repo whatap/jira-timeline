@@ -18,7 +18,7 @@ describe('resolveDateSource', () => {
 
   it('Start Date/기한만 있을 때 startDueDate를 반환한다', () => {
     const result = resolveDateSource({
-      startDate: '2025-02-01',
+      customfield_10015: '2025-02-01',
       duedate: '2025-02-28',
     });
 
@@ -33,7 +33,7 @@ describe('resolveDateSource', () => {
     const result = resolveDateSource({
       customfield_10156: '2025-01-01',
       customfield_10157: '2025-01-31',
-      startDate: '2025-02-01',
+      customfield_10015: '2025-02-01',
       duedate: '2025-02-28',
     });
 
@@ -53,7 +53,7 @@ describe('resolveDateSource', () => {
     const result = resolveDateSource({
       customfield_10156: '2025-01-01',
       customfield_10157: null,
-      startDate: '2025-02-01',
+      customfield_10015: '2025-02-01',
       duedate: '2025-02-28',
     });
 

@@ -13,8 +13,8 @@ const DATE_SOURCE_MAP: Record<DateSourceType, DateSource> = {
 export type DateFields = {
   customfield_10156?: string | null; // 예정된 시작일
   customfield_10157?: string | null; // 예정된 종료일
-  startDate?: string | null;
-  duedate?: string | null;
+  customfield_10015?: string | null; // Start date
+  duedate?: string | null; // 기한
 };
 
 export type ResolvedDate = {
@@ -26,7 +26,7 @@ export type ResolvedDate = {
 /**
  * 우선순위 기반으로 이슈의 시작/종료 날짜를 결정한다.
  * 1순위: 예정된 시작/종료 (customfield_10156, customfield_10157)
- * 2순위: Start Date / 기한 (startDate, duedate)
+ * 2순위: Start date / 기한 (customfield_10015, duedate)
  * 해석 불가 시 null 반환
  */
 export function resolveDateSource(fields: DateFields): ResolvedDate | null {
@@ -38,9 +38,9 @@ export function resolveDateSource(fields: DateFields): ResolvedDate | null {
     };
   }
 
-  if (fields.startDate && fields.duedate) {
+  if (fields.customfield_10015 && fields.duedate) {
     return {
-      startTime: fields.startDate,
+      startTime: fields.customfield_10015,
       endTime: fields.duedate,
       dateSource: DATE_SOURCE_MAP.startDueDate,
     };

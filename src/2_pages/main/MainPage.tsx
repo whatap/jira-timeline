@@ -246,6 +246,8 @@ function MainPage() {
         statusCategory: issue.statusCategory,
         statusName: issue.status,
         dateSourceLabel: issue.dateSource.label,
+        startTime: issue.startTime,
+        endTime: issue.endTime,
       }));
   }, [issueList]);
 
@@ -332,7 +334,9 @@ function MainPage() {
                     {item.statusName && (
                       <div style={{ color: colors.textColor }}>{item.statusName}</div>
                     )}
-                    <div className="text-xs text-gray-400 mt-1">{item.dateSourceLabel}</div>
+                    <div className="text-xs text-gray-400 mt-1">
+                      {item.startTime} ~ {item.endTime} ({item.dateSourceLabel})
+                    </div>
                   </div>
                 </TooltipContent>
               </Tooltip>
