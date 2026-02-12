@@ -9,6 +9,7 @@ import Timeline, {
 } from 'react-calendar-timeline';
 
 import { Header } from '@/3_widgets/header';
+import { GoToTodayButton } from '@/4_features/go-to-today';
 import { RefreshVisibleRangeButton } from '@/4_features/refresh-visible-range';
 import { UserRegisterModal } from '@/4_features/user-register-modal';
 import { useRefreshToken } from '@/5_entities/auth';
@@ -65,6 +66,10 @@ function MainPage() {
     start: moment().add(-1, 'month').format('YYYY-MM-DD'),
     end: moment().add(1, 'month').format('YYYY-MM-DD'),
   }));
+
+  // Timeline controlled mode용 타임스탬프
+  const [visibleTimeStart, setVisibleTimeStart] = useState(() => moment().add(-1, 'month').valueOf());
+  const [visibleTimeEnd, setVisibleTimeEnd] = useState(() => moment().add(1, 'month').valueOf());
 
   // 조회 중인 구간을 추적 (중복 요청 방지)
   const fetchingRanges = useRef<Set<string>>(new Set());
@@ -189,21 +194,38 @@ function MainPage() {
 
   // 타임라인 이벤트 핸들러
   const handleTimeChange = useCallback(
-    (visibleTimeStart: number, visibleTimeEnd: number, updateScrollCanvas: (start: number, end: number) => void) => {
+    (start: number, end: number, updateScrollCanvas: (start: number, end: number) => void) => {
       // debounce 적용된 조회
-      debouncedFetchRef.current?.(visibleTimeStart, visibleTimeEnd);
+      debouncedFetchRef.current?.(start, end);
 
       // 스크롤 캔버스는 즉시 업데이트
-      updateScrollCanvas(visibleTimeStart, visibleTimeEnd);
+      updateScrollCanvas(start, end);
+
+      // controlled mode 상태 업데이트
+      setVisibleTimeStart(start);
+      setVisibleTimeEnd(end);
 
       // 현재 보이는 범위 저장 (새로고침 시 사용)
       setVisibleRange({
-        start: moment(visibleTimeStart).format('YYYY-MM-DD'),
-        end: moment(visibleTimeEnd).format('YYYY-MM-DD'),
+        start: moment(start).format('YYYY-MM-DD'),
+        end: moment(end).format('YYYY-MM-DD'),
       });
     },
     [],
   );
+
+  // 오늘 날짜로 이동 핸들러
+  const handleGoToToday = useCallback(() => {
+    const start = moment().add(-1, 'month').valueOf();
+    const end = moment().add(1, 'month').valueOf();
+    setVisibleTimeStart(start);
+    setVisibleTimeEnd(end);
+    setVisibleRange({
+      start: moment(start).format('YYYY-MM-DD'),
+      end: moment(end).format('YYYY-MM-DD'),
+    });
+    fetchRangesIfNeeded(start, end);
+  }, [fetchRangesIfNeeded]);
 
   // 현재 구간 새로고침 핸들러
   const handleRefreshVisibleRange = useCallback(() => {
@@ -272,8 +294,8 @@ function MainPage() {
       <Timeline
         groups={groups}
         items={items}
-        defaultTimeStart={moment().add(-1, 'month')}
-        defaultTimeEnd={moment().add(1, 'month')}
+        visibleTimeStart={visibleTimeStart}
+        visibleTimeEnd={visibleTimeEnd}
         onTimeChange={handleTimeChange}
         canMove={false}
         canResize={false}
@@ -395,6 +417,7 @@ function MainPage() {
         </TimelineHeaders>
       </Timeline>
 
+      <GoToTodayButton onGoToToday={handleGoToToday} />
       <RefreshVisibleRangeButton
         onRefresh={handleRefreshVisibleRange}
         isLoading={isLoading()}
