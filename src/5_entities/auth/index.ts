@@ -3,3 +3,4 @@ export type { JiraCurrentUser } from './oauth';
 export { useAuthStore } from './authStore';
 export { useAuth } from './useAuth';
 export { useRefreshToken } from './useRefreshToken';
+export { useAutoRefreshToken } from './useAutoRefreshToken';
